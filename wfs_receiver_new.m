@@ -24,7 +24,7 @@ function [] = onNewData(t,b)
    
         
         while (t.BytesAvailable < frame_length - 4)
-        pause(0.01);    
+        pause(0.001);    
         end
         
             frame = uint8(fread(t, frame_length - 4));
