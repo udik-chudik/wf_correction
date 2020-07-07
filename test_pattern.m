@@ -13,11 +13,29 @@ global cx;
 global cy;
 global gain;
 global siz;
+global phase_data;
 
-cx = 901;% y, уменьшение вверх
-cy = 432;%430; % x, уменьшение влево <-
-gain = 10;
+phaseModulation = 800*pi;
+data_width = heds_slm_width_px;
+data_height = heds_slm_height_px;
+
+phase_data = zeros(data_height,data_width);
+for y = 1:data_height
+    for x = 1:data_width
+        phase_data(y, x) = phaseModulation*x/data_width;
+    end
+end
+
+cx = 901; % увеличение - влево
+cy = 440; % уменьшение - вверх
+gain = 2*pi/20;
 siz = 400;
+
+global frame_count;
+frame_count = 0;
+
+global errors;
+errors = [];
 
 %{
 fig = uifigure('Position',[100 100 600 275]);
@@ -50,9 +68,21 @@ slds.Value = siz;
 %image1.ImageSource = a;
 %}
 assemblyWF();
-wfs_receiver_new(@process);
+wfs_receiver(@process);
 
 function [] = process(wf, PV)
+
+global errors;
+
+errors = [errors PV];
+
+global frame_count;
+frame_count = frame_count + 1;
+% обрабатываем каждый 2й фрейм
+if (~(mod(frame_count, 2) == 0))
+    return;
+end
+
 
 s = size(wf);
 
@@ -63,11 +93,14 @@ s = size(wf);
             end
         end
     end
-img = imresize(wf, 12);
-img = flip(img);
-img = imrotate(img, +180);
+% crop image - выделим только апертуру пучка. ВАЖНО: это работает только
+% для текущей конфигурации установки
+wf = wf(10:31, 5:26);
+img = imresize(wf, 21);
+img = rot90(img);
+
 assembly_correction(img);
-disp(max(max(wf)));
+disp(max(max(wf)) - min(min(wf)));
 
 %set(image1, 'ImageSource', a);
 end
@@ -78,10 +111,11 @@ end
 
 function arr = plotArray(phase_data, array_to_plot, cx, cy)
     s = size(array_to_plot);
-    sX = cx - round(s(1)/2);
-    sY = cy - round(s(2)/2);
+    sX = cy - round(s(1)/2);
+    sY = cx - round(s(2)/2);
     arr = phase_data;
-    arr(sY:sY+s(1)-1, sX:sX+s(2)-1) = arr(sY:sY+s(1)-1, sX:sX+s(2)-1) + array_to_plot;
+    arr(sX+1:sX+s(1),sY+1:sY+s(2)) = arr(sX+1:sX+s(1),sY+1:sY+s(2)) + array_to_plot;
+    
 end
 
 function [] = assembly_correction(corrected)
@@ -89,17 +123,7 @@ function [] = assembly_correction(corrected)
 global cx;
 global cy;
 global gain;
-phaseModulation = 800*pi;
-data_width = heds_slm_width_px;
-data_height = heds_slm_height_px;
-
-phase_data = zeros(data_height,data_width);
-for y = 1:data_height
-    for x = 1:data_width
-        phase_data(y, x) = phaseModulation*x/data_width;
-    end
-end
-
+global phase_data;
 
 phase_data = plotArray(phase_data, -corrected*gain, cx, cy);
 
@@ -109,10 +133,11 @@ end
 
 function [] = assemblyWF()
 % heds_utils_slm_preview_show;
-global cx;
-global cy;
-global gain;
+cx = 900;
+cy = 440;
 global siz;
+global phase_data;
+%{
 phaseModulation = 800*pi;
 data_width = heds_slm_width_px;
 data_height = heds_slm_height_px;
@@ -123,7 +148,7 @@ for y = 1:data_height
         phase_data(y, x) = phaseModulation*x/data_width;
     end
 end
-
+%}
 sphere = zeros(siz,siz);
 
 for y = 1:siz
@@ -132,7 +157,7 @@ for y = 1:siz
     end
 end
 
-phase_data = plotArray(phase_data, -sphere*gain, cx, cy);
+phase_data = plotArray(phase_data, -sphere*10, cx, cy);
 
 % Show the matrix of phase values on the SLM:
 heds_show_phasevalues(phase_data);

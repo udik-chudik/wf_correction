@@ -33,13 +33,16 @@ while 1 > 0
                 wf = getField(objects, "Wavefront");
                 wf = wf(1:x,1:y);
                 PV = getField(objects, "Wavefront_PV");
+                %if (PV < 0.04)
+                %    fclose(t);
+                %    return;
+                %end
                 callBack(wf, PV);
+            elseif (objects(1).value == 3)
+                % received disconnect option
+                fclose(t);
+                return;
             end
-    
     end
 end
-end
-
-function onNewData()
-    disp("New data!");
 end
