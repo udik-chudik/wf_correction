@@ -43,7 +43,15 @@ frames = 0;
 R0 = [901 440 21];
 %options = optimoptions('patternsearch', 'MaxFunctionEvaluations', 1000);
 %patternsearch(@corrector, R0, [], [], [], [], [], [], [], options)
-fminsearch(@corrector, R0)
+%fminsearch(@corrector, R0)
+%% Start with the default options
+options = optimset;
+%% Modify options setting
+options = optimset(options,'Display', 'off');
+options = optimset(options,'TolFun', 0.01);
+options = optimset(options,'TolX', 0.5);
+options = optimset(options,'PlotFcns', { @optimplotfval });
+[x,fval,exitflag,output] = fminsearch(@corrector,R0,options)
 
 %c = corrector(901, 440, 21);
 %disp(c);
@@ -70,6 +78,7 @@ function pv = corrector(R)
     showInitPattern();
     wfsr(@process);
     pv = mean(errors(300:500));
+    disp([pv cx cy scale]);
 end
 
 
@@ -92,7 +101,7 @@ end
 
 % Append current PV
 global errors;
-if (nnz(wf==0) > 20)
+if (nnz(wf==0) < 20)
     errors = [errors 100];
 else
     errors = [errors PV];
@@ -130,8 +139,8 @@ end
 % coordinates
 function arr = addArray(phase_data, array_to_plot, cx, cy)
     s = size(array_to_plot);
-    sX = cy - round(s(1)/2);
-    sY = cx - round(s(2)/2);
+    sX = round(cy - s(1)/2);
+    sY = round(cx - s(2)/2);
     arr = phase_data;
     arr(sX+1:sX+s(1),sY+1:sY+s(2)) = arr(sX+1:sX+s(1),sY+1:sY+s(2)) + array_to_plot;    
 end
