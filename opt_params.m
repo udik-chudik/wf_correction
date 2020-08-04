@@ -210,7 +210,7 @@ while 1 > 0
         frame_length = uint8(fread(t, 4));
         frame_length = double(typecast(frame_length, 'uint32'));
         
-        while (t.BytesAvailable < frame_length - 4)
+        while (t.BytesAvailable < (frame_length - 4))
         pause(0.01);    
         end
         

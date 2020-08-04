@@ -27,8 +27,8 @@ for y = 1:data_height
     end
 end
 
-cx = 901; % увеличение - влево
-cy = 440; % уменьшение - вверх
+cx = 885; % увеличение - влево
+cy = 425; % уменьшение - вверх
 gain = 2*pi/2;
 
 
@@ -73,7 +73,7 @@ end
 wf = wf(10:31, 5:26);
 
 % Apply necessary transformation
-img = imresize(wf, 21);
+img = imresize(wf, 22);
 img = rot90(img);
 
 % Do correction
