@@ -78,17 +78,16 @@ img = rot90(img);
 
 % Do correction
 
-if frame_count < 10
+if frame_count < 25
     k = 2;
-elseif frame_count < 25
-    k = 1;
 else
     k = 0.25;
 end
 %k=1;
 
-
-apply_correction(img, k);
+if (frame_count > 100)&&(frame_count<110)
+    apply_correction(img, k);
+end
 disp(int16(frame_count))
 disp(max(max(wf)) - min(min(wf)));
 
