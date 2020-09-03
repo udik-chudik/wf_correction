@@ -15,7 +15,8 @@ global errors;      % Array of PV values for every received frame
 
 
 
-phaseModulation = 800*pi;           % Here we setup working tilt to deal with zero-order reflection from SLM
+%phaseModulation = 965*pi;           % Here we setup working tilt to deal with zero-order reflection from SLM
+phaseModulation = 957*pi;           % Here we setup working tilt to deal with zero-order reflection from SLM
 data_width = heds_slm_width_px;
 data_height = heds_slm_height_px;
 
@@ -27,8 +28,8 @@ for y = 1:data_height
     end
 end
 
-cx = 885; % увеличение - влево
-cy = 425; % уменьшение - вверх
+cx = 899; % увеличение - влево
+cy = 474; % уменьшение - вверх
 gain = 2*pi/2;
 
 
@@ -70,10 +71,10 @@ end
 % Crop image - pick out only WF zone from ws frame
 % IMPORTANT: zone coordinates depends on HW setup, so current values only
 % valid for current setup.
-wf = wf(10:31, 5:26);
+wf = wf(11:30, 4:23);
 
 % Apply necessary transformation
-img = imresize(wf, 22);
+img = imresize(wf, 22.14);
 img = rot90(img);
 
 % Do correction
@@ -89,7 +90,7 @@ end
 
 
 apply_correction(img, k);
-disp(int16(frame_count))
+%disp(int16(frame_count))
 disp(max(max(wf)) - min(min(wf)));
 
 end

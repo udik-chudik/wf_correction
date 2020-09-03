@@ -50,7 +50,7 @@ options = optimset;
 options = optimset(options,'Display', 'off');
 options = optimset(options,'TolFun', 0.01);
 options = optimset(options,'TolX', 0.5);
-options = optimset(options,'PlotFcns', { @optimplotfval });
+%options = optimset(options,'PlotFcns', { @optimplotfval });
 [x,fval,exitflag,output] = fminsearch(@corrector,R0,options)
 
 %c = corrector(901, 440, 21);
@@ -121,8 +121,8 @@ end
 % Crop image - pick out only WF zone from ws frame
 % IMPORTANT: zone coordinates depends on HW setup, so current values only
 % valid for current setup.
-wf = wf(10:31, 5:26);
-
+%wf = wf(10:31, 5:26);
+wf = wf(11:30, 4:23);
 
 % Apply necessary transformation
 img = imresize(wf, scale);
@@ -162,7 +162,7 @@ end
 
 % Display initial pattern - spherical abberation
 function [] = showInitPattern()
-phaseModulation = 800*pi;           % Here we setup working tilt to deal with zero-order reflection from SLM
+phaseModulation = 957*pi;           % Here we setup working tilt to deal with zero-order reflection from SLM
 data_width = heds_slm_width_px;
 data_height = heds_slm_height_px;
 global phase_data;
