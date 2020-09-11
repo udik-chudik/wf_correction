@@ -13,8 +13,6 @@ global phase_data;  % Current SLM phase screen
 global frame_count; % Holds current frame number
 global errors;      % Array of PV values for every received frame
 
-
-
 %phaseModulation = 965*pi;           % Here we setup working tilt to deal with zero-order reflection from SLM
 phaseModulation = 957*pi;           % Here we setup working tilt to deal with zero-order reflection from SLM
 data_width = heds_slm_width_px;
@@ -28,11 +26,9 @@ for y = 1:data_height
     end
 end
 
-cx = 899; % увеличение - влево
+cx = 899+20; % увеличение - влево
 cy = 474; % уменьшение - вверх
 gain = 2*pi/2;
-
-
 
 frame_count = 0;
 errors = [];
@@ -40,10 +36,26 @@ errors = [];
 showInitPattern();
 wfs_receiver(@process);
 
+%{
+%%% Calculate Zernike polynomials Z = Zmn(x,y)
+% Lists of angular frequency (m) and radial orders (n)
+ZM = [0, -1, 1, -2, 0, 2, -3, -1, 1, 3, -4, -2, 0, 2, 4];
+ZN = [0, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4];
+
+% Number of pixilies for X, Y axis for correction
+Nx = 443;
+Ny = 443;
+Z = zeros( Nx, Ny, length(ZM) );
+for i = 1:length(ZM)
+    Z(:,:,i) = zern(ZM(i), ZN(i), Nx, Ny);
+end
+%}
+
+
+    
 % This function is called by wfs_receiver when new phase screen has been
 % received. wf - new phase screen, PV - calculated Peak to Value
 function [] = process(wf, PV)
-
 % Append current PV
 global errors;
 errors = [errors PV];
@@ -75,6 +87,7 @@ wf = wf(11:30, 4:23);
 
 % Apply necessary transformation
 img = imresize(wf, 22.14);
+
 img = rot90(img);
 
 % Do correction
@@ -86,11 +99,11 @@ elseif frame_count < 25
 else
     k = 0.25;
 end
+
 %k=1;
 
-
 apply_correction(img, k);
-%disp(int16(frame_count))
+disp(int16(frame_count))
 disp(max(max(wf)) - min(min(wf)));
 
 end
@@ -112,19 +125,18 @@ global cx;
 global cy;
 global gain;
 global phase_data;
-
 phase_data = addArray(phase_data, -corrected*gain*k, cx, cy);
-%phase_data = addArray(phase_data, -corrected*gain, cx, cy);
+
 % Show the matrix of phase values on the SLM:
-heds_show_phasevalues(phase_data);
+heds_show_phasevalues(single(phase_data));
 end
 
 % Display initial pattern - spherical abberation
 function [] = showInitPattern()
 
 global phase_data;
-cx = 900;   % Center coordinates of the sphere
-cy = 440;
+global cx;% = 900;   % Center coordinates of the sphere
+global cy;% = 440;
 siz = 400;  % Size of the pattern in PX on SLM
 
 % Make spherical pattern
@@ -136,9 +148,7 @@ for y = 1:siz
 end
 phase_data = addArray(phase_data, -sphere*10, cx, cy);
 % Show the matrix of phase values on the SLM
-heds_show_phasevalues(phase_data);
+heds_show_phasevalues(single(phase_data));
 end
-
-
 
 
