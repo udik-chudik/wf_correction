@@ -39,22 +39,24 @@ end
 
 
 
-cx = 901; % увеличение - влево
-cy = 440; % уменьшение - вверх
+cx = 1030; % увеличение - влево
+cy = 470; % уменьшение - вверх
 gain = 2*pi/20;
 scale = 21;
 need_connect = 1;
 
 
 
-
+%showShperePattern();
+%return;
 
 t = tcpip('0.0.0.0', 3015, 'NetworkRole', 'server');
 t.InputBufferSize = 65535;
 fopen(t);
 frames = 0;
 
-R0 = [0.08 0.01 -0.02 0 -0.05 -0.02 -0.005 -0.01 0.01 0.002]*2*pi;
+%R0 = [0.118    -0.044   -0.028    -0.035   -0.086   -0.008   0.026   0.032    0.022    0.001]*2*pi;
+R0 = [ 0 ]*2*pi;
 %options = optimoptions('patternsearch', 'MaxFunctionEvaluations', 1000);
 %patternsearch(@corrector, R0, [], [], [], [], [], [], [], options)
 %fminsearch(@corrector, R0)
@@ -63,7 +65,7 @@ options = optimset;
 %% Modify options setting
 options = optimset(options,'Display', 'off');
 options = optimset(options,'TolFun', 0.005);
-options = optimset(options,'TolX', 0.00001);
+options = optimset(options,'TolX', 0.000001);
 %options = optimset(options,'PlotFcns', { @optimplotfval });
 [x,fval,exitflag,output] = fminsearch(@corrector,R0,options)
 
@@ -168,7 +170,7 @@ global phase_data;
 
 
 % Show the matrix of phase values on the SLM:
-heds_show_phasevalues(single(addArray(phase_data, corrected*2, cx, cy)));
+heds_show_phasevalues(single(addArray(phase_data, corrected, cx, cy)));
 end
 
 
@@ -188,6 +190,27 @@ end
 
 % Show the matrix of phase values on the SLM
 heds_show_phasevalues(single(phase_data));
+end
+
+
+%% For looking of img the center
+function [] = showShperePattern()
+
+global phase_data;
+global cx;% = 900;   % Center coordinates of the sphere
+global cy;% = 440;
+siz = 400;  % Size of the pattern in PX on SLM
+
+% Make spherical pattern
+sphere = zeros(siz,siz);
+for y = 1:siz
+    for x = 1:siz
+        sphere(y, x) = (((x-siz/2)^2 + (y-siz/2)^2)^(1/2))*pi/(sqrt((siz/2)^2 + (siz/2)^2));
+    end
+end
+
+% Show the matrix of phase values on the SLM
+heds_show_phasevalues(single(addArray(phase_data, -sphere*10, cx, cy)));
 end
 
 
