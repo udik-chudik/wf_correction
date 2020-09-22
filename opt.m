@@ -1,8 +1,9 @@
 r0 = [10 10];
+gs = GlobalSearch;
+opts = optimoptions(@fmincon,'Algorithm','sqp');
+problem = createOptimProblem('fmincon', 'x0', r0, 'objective', @parabola,'lb',[1,1],'ub',[3,3],'options',opts);
 
-%options = optimoptions('patternsearch', 'MeshTolerance', 0.5);
-options = optimoptions('patternsearch', 'ConstraintTolerance', 1);
-patternsearch(@parabola, r0, [], [], [], [], [], [], [], options)
+x = run(gs,problem);
 
 
 function z = parabola(R)

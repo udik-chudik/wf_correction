@@ -21,7 +21,7 @@ global t;
 global frames;
 
 global Zern_coeff;
-MAX_FRAMES_PER_CHANGE = 20;
+MAX_FRAMES_PER_CHANGE = 10;
 %%% Calculate Zernike polynomials Z = Zmn(x,y)
 % Lists of angular frequency (m) and radial orders (n)
 ZM = [0, -1, 1, -2, 0, 2, -3, -1, 1, 3, -4, -2, 0, 2, 4];
@@ -55,8 +55,8 @@ t.InputBufferSize = 65535;
 fopen(t);
 frames = 0;
 
-%R0 = [0.118    -0.044   -0.028    -0.035   -0.086   -0.008   0.026   0.032    0.022    0.001]*2*pi;
-R0 = [ 0 ]*2*pi;
+R0 = [0.118    -0.044   -0.028    -0.035   -0.086   -0.008   0.026   0.032    0.022    0.001];
+
 %options = optimoptions('patternsearch', 'MaxFunctionEvaluations', 1000);
 %patternsearch(@corrector, R0, [], [], [], [], [], [], [], options)
 %fminsearch(@corrector, R0)
@@ -67,16 +67,18 @@ options = optimset(options,'Display', 'off');
 options = optimset(options,'TolFun', 0.005);
 options = optimset(options,'TolX', 0.000001);
 %options = optimset(options,'PlotFcns', { @optimplotfval });
-[x,fval,exitflag,output] = fminsearch(@corrector,R0,options)
+%[x,fval,exitflag,output] = fminsearch(@corrector,R0,options)
+gs = GlobalSearch;
+opts = optimoptions(@fmincon,'Algorithm','sqp');
+problem = createOptimProblem('fmincon', 'x0', R0, 'objective', @corrector,'lb',[-1,-1,-1,-1,-1,-1,-1,-1,-1,-1],'ub',[1,1,1,1,1,1,1,1,1,1],'options',opts);
 
-%c = corrector(901, 440, 21);
-%disp(c);
-
+x = run(gs,problem);
 fclose(t);
 
 
 % Main optimization function
 function pv = corrector(R)
+    disp("called!")
     % Check coef. bounds
     for i=R
         if abs(i)>1
@@ -98,7 +100,7 @@ function pv = corrector(R)
     frame_count = 0;
     showInitPattern();
     wfsr(@process);
-    pv = mean(errors(1:MAX_FRAMES_PER_CHANGE));
+    pv = double(mean(errors(1:MAX_FRAMES_PER_CHANGE)));
     disp([pv Zern_coeff]);
 end
 
