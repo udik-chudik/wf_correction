@@ -26,8 +26,8 @@ for y = 1:data_height
     end
 end
 
-cx = 899+20; % увеличение - влево
-cy = 474; % уменьшение - вверх
+cx = 1019; % увеличение - влево
+cy = 486; % уменьшение - вверх
 gain = 2*pi/2;
 
 frame_count = 0;
@@ -83,12 +83,13 @@ end
 % Crop image - pick out only WF zone from ws frame
 % IMPORTANT: zone coordinates depends on HW setup, so current values only
 % valid for current setup.
-wf = wf(11:30, 4:23);
+wf = wf(14:33, 8:25);
 
 % Apply necessary transformation
-img = imresize(wf, 22.14);
+img = imresize(wf, 21.8);
 
-img = rot90(img);
+%img = rot90(img);
+img = imrotate(img, 90+45+45+45);
 
 % Do correction
 

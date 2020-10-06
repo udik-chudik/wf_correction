@@ -24,9 +24,8 @@ global frames;
 
 
 
-
-cx = 901; % увеличение - влево
-cy = 440; % уменьшение - вверх
+cx = 1022; % увеличение - влево
+cy = 460; % уменьшение - вверх
 gain = 2*pi/20;
 scale = 21;
 need_connect = 1;
@@ -40,7 +39,7 @@ t.InputBufferSize = 65535;
 fopen(t);
 frames = 0;
 
-R0 = [901 440 21];
+R0 = [1022 460 22.14];
 %options = optimoptions('patternsearch', 'MaxFunctionEvaluations', 1000);
 %patternsearch(@corrector, R0, [], [], [], [], [], [], [], options)
 %fminsearch(@corrector, R0)
@@ -61,7 +60,7 @@ fclose(t);
 
 % Main optimization function
 function pv = corrector(R)
-    if ((R(1) > 1000) || (R(1) < 700) || (R(2) > 700) || (R(2) < 200) || (R(3) > 30) || (R(1) < 10))
+    if ((R(1) > 1200) || (R(1) < 900) || (R(2) > 700) || (R(2) < 200) || (R(3) > 25) || (R(1) < 20))
         pv = 10;
         return;
     end
@@ -122,12 +121,12 @@ end
 % IMPORTANT: zone coordinates depends on HW setup, so current values only
 % valid for current setup.
 %wf = wf(10:31, 5:26);
-wf = wf(11:30, 4:23);
+wf = wf(14:33, 8:25);
 
 % Apply necessary transformation
 img = imresize(wf, scale);
-img = rot90(img);
-
+%img = rot90(img);
+img = imrotate(img, 90+45+45+45);
 % Do correction
 apply_correction(img);
 
@@ -174,8 +173,11 @@ for y = 1:data_height
     end
 end
 
-cx = 900;   % Center coordinates of the sphere
-cy = 440;
+global cx;
+global cy;
+
+%cx = 900;   % Center coordinates of the sphere
+%cy = 440;
 siz = 400;  % Size of the pattern in PX on SLM
 
 % Make spherical pattern

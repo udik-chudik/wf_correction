@@ -16,7 +16,8 @@ global frame_count;
 global errors;      % Array of PV values for every received frame
 global need_connect;
 global MAX_FRAMES_PER_CHANGE;   % Number of frames to acquire to calc mean PV value before change correction coefficients
-
+global PVS;
+PVS = [];
 global t;
 global frames;
 
@@ -39,8 +40,8 @@ end
 
 
 
-cx = 1030; % увеличение - влево
-cy = 470; % уменьшение - вверх
+cx = 1022; % увеличение - влево
+cy = 460; % уменьшение - вверх
 gain = 2*pi/20;
 scale = 21;
 need_connect = 1;
@@ -55,7 +56,8 @@ t.InputBufferSize = 65535;
 fopen(t);
 frames = 0;
 
-R0 = [0.118    -0.044   -0.028    -0.035   -0.086   -0.008   0.026   0.032    0.022    0.001];
+%R0 = [0.118    -0.044   -0.028    -0.035   -0.086   -0.008   0.026   0.032    0.022    0.022];
+R0 = [0.0    0   0    0   -0.12   0];
 
 %options = optimoptions('patternsearch', 'MaxFunctionEvaluations', 1000);
 %patternsearch(@corrector, R0, [], [], [], [], [], [], [], options)
@@ -66,19 +68,22 @@ options = optimset;
 options = optimset(options,'Display', 'off');
 options = optimset(options,'TolFun', 0.005);
 options = optimset(options,'TolX', 0.000001);
+options = optimset(options, 'Algorithm','sqp');
 %options = optimset(options,'PlotFcns', { @optimplotfval });
 %[x,fval,exitflag,output] = fminsearch(@corrector,R0,options)
-gs = GlobalSearch;
-opts = optimoptions(@fmincon,'Algorithm','sqp');
-problem = createOptimProblem('fmincon', 'x0', R0, 'objective', @corrector,'lb',[-1,-1,-1,-1,-1,-1,-1,-1,-1,-1],'ub',[1,1,1,1,1,1,1,1,1,1],'options',opts);
+%options = optimset(options, 'lb',[-1,-1,-1,-1,-1,-1],'ub',[1,1,1,1,1,1]);
+[x,fval,exitflag,output] = fminsearch(@corrector,R0,options)
+%gs = GlobalSearch;
+%opts = optimoptions(@fmincon,'Algorithm','sqp');
+%problem = createOptimProblem('fmincon', 'x0', R0, 'objective', @corrector,'lb',[-1,-1,-1,-1,-1,-1,-1,-1,-1,-1],'ub',[1,1,1,1,1,1,1,1,1,1],'options',opts);
 
-x = run(gs,problem);
+%x = run(gs,problem);
 fclose(t);
+
 
 
 % Main optimization function
 function pv = corrector(R)
-    disp("called!")
     % Check coef. bounds
     for i=R
         if abs(i)>1
@@ -100,8 +105,10 @@ function pv = corrector(R)
     frame_count = 0;
     showInitPattern();
     wfsr(@process);
-    pv = double(mean(errors(1:MAX_FRAMES_PER_CHANGE)));
+    pv = double(mean(errors(3:MAX_FRAMES_PER_CHANGE)));
     disp([pv Zern_coeff]);
+    global PVS;
+    PVS = [PVS pv];
 end
 
 
@@ -145,7 +152,7 @@ for i=1:sc(2)
     img = img + Z(:,:,i)*Zern_coeff(i);
 end
 % Do correction
-apply_correction(img);
+apply_correction(img*20);
 
 %disp(PV);
 
@@ -212,7 +219,7 @@ for y = 1:siz
 end
 
 % Show the matrix of phase values on the SLM
-heds_show_phasevalues(single(addArray(phase_data, -sphere*10, cx, cy)));
+heds_show_phasevalues(single(addArray(phase_data, -sphere*5, cx, cy)));
 end
 
 
