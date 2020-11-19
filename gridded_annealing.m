@@ -20,7 +20,7 @@ global PVS;
 PVS = [];
 global t;
 global frames;
-
+global N_ACT;
 global Zern_coeff;
 MAX_FRAMES_PER_CHANGE = 10;
 %%% Calculate Zernike polynomials Z = Zmn(x,y)
@@ -37,7 +37,7 @@ for i = 1:length(ZM)
     Z(:,:,i) = zern(ZM(i), ZN(i), Nx, Ny);
 end
 
-
+N_ACT = 3;
 
 cx = 1022; % увеличение - влево
 cy = 460; % уменьшение - вверх
@@ -56,40 +56,86 @@ fopen(t);
 frames = 0;
 
 %R0 = [0.118    -0.044   -0.028    -0.035   -0.086   -0.008   0.026   0.032    0.022    0.022];
-R0 = [0.0    0   0    0   -0.12   0];
+global R0;
 
-%options = optimoptions('patternsearch', 'MaxFunctionEvaluations', 1000);
-%patternsearch(@corrector, R0, [], [], [], [], [], [], [], options)
-%fminsearch(@corrector, R0)
-%% Start with the default options
-options = optimset;
-%% Modify options setting
-options = optimset(options,'Display', 'off');
-options = optimset(options,'TolFun', 0.005);
-options = optimset(options,'TolX', 0.000001);
-options = optimset(options, 'Algorithm','sqp');
-%options = optimset(options,'PlotFcns', { @optimplotfval });
-%[x,fval,exitflag,output] = fminsearch(@corrector,R0,options)
-%options = optimset(options, 'lb',[-1,-1,-1,-1,-1,-1],'ub',[1,1,1,1,1,1]);
-[x,fval,exitflag,output] = fminsearch(@corrector,R0,options)
-%gs = GlobalSearch;
-%opts = optimoptions(@fmincon,'Algorithm','sqp');
-%problem = createOptimProblem('fmincon', 'x0', R0, 'objective', @corrector,'lb',[-1,-1,-1,-1,-1,-1,-1,-1,-1,-1],'ub',[1,1,1,1,1,1,1,1,1,1],'options',opts);
+R0 = GenerateStateCandidate(1,1);
 
-%x = run(gs,problem);
+S_current = R0;
+
+N = 0;
+
+T_START = 1;
+
+Current_E = 5;
+T_current = T_START;
+T_END = 0.001;
+%{
+while (T_current > T_END)
+   
+    N = N + 1;
+    S_candidate = GenerateStateCandidate(S_current);
+    Candidate_E = CalculateEnergy(S_candidate);
+    dE = Candidate_E - Current_E;
+    if (dE <= 0)
+        S_current = S_candidate;
+        Current_E = Candidate_E;
+    else
+        if NeedMakeTransit(GetTransitionProbability(dE, T_current))
+            S_current = S_candidate;
+            Current_E = Candidate_E;
+        end
+    end
+    T_current = DecreaseTemperature(T_START, N);
+end
+%}
+%disp(S_current);
+
+%%
+options = optimoptions('simulannealbnd', 'FunctionTolerance', 1e-1);
+x = simulannealbnd(@corrector, R0, ones(1,N_ACT*N_ACT)*-1, ones(1,N_ACT*N_ACT), options);
+%%
+
+% options = optimoptions('ga', 'FunctionTolerance', 10, 'MaxGenerations', 1000);
+% x = ga(@corrector, N_ACT^2, [], [], [],[], ones(1,15)*-1, ones(1,15));
+
+%% Monte-carlo
+%{
+best_state = [];
+best_pv = 10;
+for i=1:10
+    test_point = GenerateStateCandidate(1,1);
+    p = corrector(test_point);
+    if (p < best_pv)
+        best_pv = p;
+        best_state = test_point;
+    end
+end
+
+sz = size(Z);
+sc = size(Zern_coeff);
+
+img = zeros(sz(1),sz(2));
+for i=1:sc(2)
+    img = img + Z(:,:,i)*best_state(i);
+end
+% Do correction
+apply_correction(img*20);
+%}
+
+%%
+
 fclose(t);
 
 
 
+%%
+function pv = CalculateEnergy(R)
+    pv = corrector(R);
+end
+
 % Main optimization function
 function pv = corrector(R)
-    % Check coef. bounds
-    for i=R
-        if abs(i)>1
-            pv = 10;
-            return;
-        end
-    end
+    
     global cx;
     global cy;
     global scale;
@@ -105,7 +151,7 @@ function pv = corrector(R)
     showInitPattern();
     wfsr(@process);
     pv = double(mean(errors(3:MAX_FRAMES_PER_CHANGE)));
-    disp([pv Zern_coeff]);
+    disp([pv]);
     global PVS;
     PVS = [PVS pv];
 end
@@ -142,14 +188,21 @@ global frame_count;
 frame_count = frame_count + 1;
 
 
+global N_ACT;
+V = zeros(N_ACT, N_ACT);
+    for i=1:N_ACT
+        for j=1:N_ACT
+            V(j,i) = Zern_coeff(N_ACT*(i-1)+j);
+        end
+    end
+[X,Y] = ndgrid(1:N_ACT,1:N_ACT);
+F = griddedInterpolant(X,Y,V,'spline');
 
-sz = size(Z);
-sc = size(Zern_coeff);
+IMG_SIZE = 400;
 
-img = zeros(sz(1),sz(2));
-for i=1:sc(2)
-    img = img + Z(:,:,i)*Zern_coeff(i);
-end
+[Xq,Yq] = ndgrid(1:1/IMG_SIZE:N_ACT,1:1/IMG_SIZE:N_ACT);
+img = F(Xq,Yq);
+
 % Do correction
 apply_correction(img*20);
 
@@ -279,3 +332,36 @@ while 1 > 0
     end
 end
 end
+
+function [ a ] = NeedMakeTransit(probability )
+    if(probability > 1 || probability < 0)
+        error('Violation of argument constraint');
+    end
+
+    value = rand(1);
+
+    if(value <= probability)
+        a = 1;
+    else
+        a = 0; 
+    end
+
+end
+
+function V = GenerateStateCandidate(optimValues,problem)
+    global N_ACT;
+    V = 1-2*rand(1, N_ACT^2);
+    
+end
+
+
+
+function [ T ] = DecreaseTemperature( initialTemperature, k)
+T = initialTemperature / k; 
+end
+
+function [p] = GetTransitionProbability(dE, T)
+    p = exp(-dE*2/T);
+end
+
+

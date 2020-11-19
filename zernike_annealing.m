@@ -56,30 +56,81 @@ fopen(t);
 frames = 0;
 
 %R0 = [0.118    -0.044   -0.028    -0.035   -0.086   -0.008   0.026   0.032    0.022    0.022];
-R0 = [0.0    0   0    0   -0.12   0];
+global R0;
+%R0 = [0.118    -0.044   -0.028    -0.035   -0.086   -0.008];
+R0 = [-0.5026   -0.0643   -0.2524   -0.0041   -0.0998   -0.0331 0 0 0 0];
+S_current = R0;
 
-%options = optimoptions('patternsearch', 'MaxFunctionEvaluations', 1000);
-%patternsearch(@corrector, R0, [], [], [], [], [], [], [], options)
-%fminsearch(@corrector, R0)
-%% Start with the default options
-options = optimset;
-%% Modify options setting
-options = optimset(options,'Display', 'off');
-options = optimset(options,'TolFun', 0.005);
-options = optimset(options,'TolX', 0.000001);
-options = optimset(options, 'Algorithm','sqp');
-%options = optimset(options,'PlotFcns', { @optimplotfval });
-%[x,fval,exitflag,output] = fminsearch(@corrector,R0,options)
-%options = optimset(options, 'lb',[-1,-1,-1,-1,-1,-1],'ub',[1,1,1,1,1,1]);
-[x,fval,exitflag,output] = fminsearch(@corrector,R0,options)
-%gs = GlobalSearch;
-%opts = optimoptions(@fmincon,'Algorithm','sqp');
-%problem = createOptimProblem('fmincon', 'x0', R0, 'objective', @corrector,'lb',[-1,-1,-1,-1,-1,-1,-1,-1,-1,-1],'ub',[1,1,1,1,1,1,1,1,1,1],'options',opts);
+N = 0;
 
-%x = run(gs,problem);
+T_START = 1;
+
+Current_E = 5;
+T_current = T_START;
+T_END = 0.001;
+%{
+while (T_current > T_END)
+   
+    N = N + 1;
+    S_candidate = GenerateStateCandidate(S_current);
+    Candidate_E = CalculateEnergy(S_candidate);
+    dE = Candidate_E - Current_E;
+    if (dE <= 0)
+        S_current = S_candidate;
+        Current_E = Candidate_E;
+    else
+        if NeedMakeTransit(GetTransitionProbability(dE, T_current))
+            S_current = S_candidate;
+            Current_E = Candidate_E;
+        end
+    end
+    T_current = DecreaseTemperature(T_START, N);
+end
+%}
+%disp(S_current);
+
+%%
+options = optimoptions('simulannealbnd', 'FunctionTolerance', 1e-1, 'AnnealingFcn', @GenerateStateCandidate );
+x = simulannealbnd(@corrector, R0, [-1 -1 -1 -1 -1 -1 -1 -1 -1 -1], [1 1 1 1 1 1 1 1 1 1], options);
+%%
+
+%options = optimoptions('ga', 'FunctionTolerance', 10, 'MaxGenerations', 1000);
+%x = ga(@corrector, 15, [], [], [],[], ones(1,15)*-1, ones(1,15));
+
+%% Monte-carlo
+%{
+best_state = [];
+best_pv = 10;
+for i=1:10
+    test_point = GenerateStateCandidate(1,1);
+    p = corrector(test_point);
+    if (p < best_pv)
+        best_pv = p;
+        best_state = test_point;
+    end
+end
+
+sz = size(Z);
+sc = size(Zern_coeff);
+
+img = zeros(sz(1),sz(2));
+for i=1:sc(2)
+    img = img + Z(:,:,i)*best_state(i);
+end
+% Do correction
+apply_correction(img*20);
+%}
+
+%%
+
 fclose(t);
 
 
+
+%%
+function pv = CalculateEnergy(R)
+    pv = corrector(R);
+end
 
 % Main optimization function
 function pv = corrector(R)
@@ -279,3 +330,35 @@ while 1 > 0
     end
 end
 end
+
+function [ a ] = NeedMakeTransit(probability )
+    if(probability > 1 || probability < 0)
+        error('Violation of argument constraint');
+    end
+
+    value = rand(1);
+
+    if(value <= probability)
+        a = 1;
+    else
+        a = 0; 
+    end
+
+end
+
+function [state] = GenerateStateCandidate(optimValues,problem)
+    global R0;
+    state = (1-2*rand(1, length(R0)))./(linspace(1,length(R0),length(R0)).^0.5);
+end
+
+
+
+function [ T ] = DecreaseTemperature( initialTemperature, k)
+T = initialTemperature / k; 
+end
+
+function [p] = GetTransitionProbability(dE, T)
+    p = exp(-dE*2/T);
+end
+
+
